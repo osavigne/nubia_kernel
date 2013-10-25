@@ -53,14 +53,14 @@ static void update_battery_information(void)
 static void power_debug_work_func(struct work_struct *work)
 {
 	update_battery_information();
-	printk("power_debug_work_func_______start!\n");
+//	printk("power_debug_work_func_______start!\n");
 	//print wakelocks
-	global_print_active_locks(WAKE_LOCK_SUSPEND);
+//	global_print_active_locks(WAKE_LOCK_SUSPEND);
 	//wakelock_stats_show_debug();
 	//print battery related information
 	print_battery_information();
 	hrtimer_start(&power_debug_information.timer,ktime_set(10,0),HRTIMER_MODE_REL);	
-	printk("power_debug_work_func_________over!\n");
+//	printk("power_debug_work_func_________over!\n");
 
 }
 

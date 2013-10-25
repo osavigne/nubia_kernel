@@ -941,7 +941,7 @@ static int msm_xfer_msg(struct slim_controller *ctrl, struct slim_msg_txn *txn)
 // Qualcomm  patch for solving the problem of device switch 2s delay ,add by  ZTEMT zmwu
 if (mc == SLIM_USR_MC_GENERIC_ACK) {	
 	u32 mgrstat = readl_relaxed(dev->base + MGR_STATUS);
-	pr_err("generic ack:0x%x, mgrstat:0x%x", pbuf[0], mgrstat);
+	pr_debug("generic ack:0x%x, mgrstat:0x%x", pbuf[0], mgrstat);
 }
 //ZTEMT END
 

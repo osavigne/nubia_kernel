@@ -5,8 +5,8 @@
 * Authors            : MH - C&I BU - Application Team
 *		     : Matteo Dameno (matteo.dameno@st.com)
 *		     : Carmine Iascone (carmine.iascone@st.com)
-* Version            : V.1.0.10
-* Date               : 2011/Aug/16
+* Version            : V.1.0.11
+* Date               : 2012/Jan/09
 *
 ********************************************************************************
 *
@@ -28,72 +28,93 @@ Version History.
 
  Revision 1.0.10: 2011/Aug/16
   merges release 1.0.10 acc + 1.1.5.3 gyr
+ Revision 1.0.11: 2012/Jan/09
+  moved under input/misc
+ Revision 1.0.12: 2012/Feb/29
+  renamed field g_range to fs_range in lsm330dlc_acc_platform_data
+  replaced defines SA0L and SA0H with LSM330DLC_SAD0x
 *******************************************************************************/
 
 #ifndef	__LSM330DLC_H__
 #define	__LSM330DLC_H__
 #include <linux/module.h>
 
-#define SAD0L				0x00
-#define SAD0H				0x01
-
-#define LSM330DLC_ACC_I2C_SADROOT	0x0C
-#define LSM330DLC_ACC_I2C_SAD_L	((LSM330DLC_ACC_I2C_SADROOT<<1)|SAD0L)
-#define LSM330DLC_ACC_I2C_SAD_H	((LSM330DLC_ACC_I2C_SADROOT<<1)|SAD0H)
-
-#define LSM330DLC_GYR_I2C_SADROOT	0x35
-#define LSM330DLC_GYR_I2C_SAD_L		((LSM330DLC_GYR_I2C_SADROOT<<1)|SAD0L)
-#define LSM330DLC_GYR_I2C_SAD_H		((LSM330DLC_GYR_I2C_SADROOT<<1)|SAD0H)
 
 #define	LSM330DLC_ACC_DEV_NAME		"lsm330dlc_acc"
 #define LSM330DLC_GYR_DEV_NAME		"lsm330dlc_gyr"
 
 /************************************************/
-/* 	Accelerometer section defines	 	*/
+/*	Accelerometer section defines		*/
 /************************************************/
 
 #define	LSM330DLC_ACC_MIN_POLL_PERIOD_MS	1
 
-/* Accelerometer Sensor Full Scale */
-#define	LSM330DLC_ACC_FS_MASK		0x30
-#define LSM330DLC_ACC_G_2G 		0x00
-#define LSM330DLC_ACC_G_4G 		0x10
-#define LSM330DLC_ACC_G_8G 		0x20
-#define LSM330DLC_ACC_G_16G		0x30
 
 /************************************************/
-/* 	Gyroscope section defines	 	*/
+/*	Gyroscope section defines		*/
 /************************************************/
+
+#define LSM330DLC_GYR_ENABLED	1
+#define LSM330DLC_GYR_DISABLED	0
+#define LSM330DLC_GYR_MIN_POLL_PERIOD_MS	2
+
+
+#ifdef	__KERNEL__
+
+#define LSM330DLC_SAD0L			(0x00)
+#define LSM330DLC_SAD0H			(0x01)
+
+/* gyro section */
+#define LSM330DLC_GYR_I2C_SADROOT		(0x35)
+
+/* I2C address if gyr SA0 pin to GND */
+#define LSM330DLC_GYR_I2C_SAD_L		((LSM330DLC_GYR_I2C_SADROOT<<1)|\
+							LSM330DLC_SAD0L)
+/* I2C address if gyr SA0 pin to Vdd */
+#define LSM330DLC_GYR_I2C_SAD_H		((LSM330DLC_GYR_I2C_SADROOT<<1)|\
+							LSM330DLC_SAD0H)
+/* to set gpios numb connected to gyro interrupt pins,
+ * the unused ones have to be set to -EINVAL
+ */
+#define LSM330DLC_GYR_DEFAULT_INT1_GPIO	(-EINVAL)
+#define LSM330DLC_GYR_DEFAULT_INT2_GPIO	(-EINVAL)
+
+/* Gyroscope Sensor Full Scale */
+#define LSM330DLC_GYR_FS_250DPS		(0x00)
+#define LSM330DLC_GYR_FS_500DPS		(0x10)
+#define LSM330DLC_GYR_FS_2000DPS		(0x30)
+
+
+
+/* acc section */
+#define LSM330DLC_ACC_I2C_SADROOT		(0x0C)
+/* I2C address if acc SA0 pin to GND */
+#define LSM330DLC_ACC_I2C_SAD_L		((LSM330DLC_ACC_I2C_SADROOT<<1)| \
+							LSM330DLC_SAD0L)
+/* I2C address if acc SA0 pin to Vdd */
+#define LSM330DLC_ACC_I2C_SAD_H		((LSM330DLC_ACC_I2C_SADROOT<<1)| \
+							LSM330DLC_SAD0H)
 
 /* to set gpios numb connected to gyro interrupt pins,
  * the unused ones havew to be set to -EINVAL
  */
-#define DEFAULT_INT1_GPIO		(-EINVAL)
-#define DEFAULT_INT2_GPIO		(-EINVAL)
+#define LSM330DLC_ACC_DEFAULT_INT1_GPIO	(-EINVAL)
+#define LSM330DLC_ACC_DEFAULT_INT2_GPIO	(-EINVAL)
 
-#define LSM330DLC_MIN_POLL_PERIOD_MS	2
+/* Accelerometer Sensor Full Scale */
+#define	LSM330DLC_ACC_FS_MASK		(0x30)
+#define LSM330DLC_ACC_G_2G		(0x00)
+#define LSM330DLC_ACC_G_4G		(0x10)
+#define LSM330DLC_ACC_G_8G		(0x20)
+#define LSM330DLC_ACC_G_16G		(0x30)
 
-#define LSM330DLC_GYR_FS_250DPS		0x00
-#define LSM330DLC_GYR_FS_500DPS		0x10
-#define LSM330DLC_GYR_FS_2000DPS	0x30
 
-#define LSM330DLC_GYR_ENABLED	1
-#define LSM330DLC_GYR_DISABLED	0
-
-#ifdef	__KERNEL__
-
-#define GPIO_G_SENSOR_INT1 22
-#define GPIO_G_SENSOR_INT2 23
-
-#define GPIO_GYRO_INT      28
-
-//power for i2c and sensor end
 
 struct lsm330dlc_acc_platform_data {
 	unsigned int poll_interval;
 	unsigned int min_interval;
 
-	u8 g_range;
+	u8 fs_range;
 
 	u8 axis_map_x;
 	u8 axis_map_y;
@@ -107,8 +128,6 @@ struct lsm330dlc_acc_platform_data {
 	void (*exit)(void);
 	int (*power_on)(void);
 	int (*power_off)(void);
-    int (*gpio_init)(void);
-    int (*gpio_exit)(void);	
 
 	/* set gpio_int[1,2] either to the choosen gpio pin number or to -EINVAL
 	 * if leaved unconnected
@@ -122,8 +141,6 @@ struct lsm330dlc_gyr_platform_data {
 	void (*exit)(void);
 	int (*power_on)(void);
 	int (*power_off)(void);
-    int (*gpio_init)(void);
-    int (*gpio_exit)(void);	
 
 	unsigned int poll_interval;
 	unsigned int min_interval;

@@ -1856,7 +1856,7 @@ static int sensors_acc_power_init(struct i2c_client *client)
 out:
 	return rc;
 }
-
+/*
 int sensor_acc_lsm330d_gpio_int_init(unsigned pin_num, char *pin_name)
 {
     int rc;
@@ -1940,10 +1940,10 @@ int sensor_acc_lsm330d_gpio_exit(void)
 	printk(KERN_INFO "----------%s: %d: exit \n", __func__,__LINE__);
     return 0;
 }
-
+*/
 
 struct lsm330dlc_acc_platform_data sensors_acc_lsm330d_pdata = {
-    .g_range = LSM330DLC_ACC_G_2G,
+    .fs_range = LSM330DLC_ACC_G_2G,
 #if defined(CONFIG_ZTEMT_SENSORS_NUBIA_Z5) 
 	.axis_map_x = 0,
 	.axis_map_y = 1,
@@ -1969,23 +1969,24 @@ struct lsm330dlc_acc_platform_data sensors_acc_lsm330d_pdata = {
 #ifdef CONFIG_FEATURE_ZTEMT_VIBRATOR_HAVE_MISS_EVENT
 
 	.gpio_int1 = GPIO_G_SENSOR_INT1,
-
-#else
-
-    .gpio_int1 = -EINVAL,
 	.gpio_int2 = -EINVAL,
+#else
+	/*Chenxi Mao 20131025*/
+    .gpio_int1 = LSM330DLC_ACC_DEFAULT_INT1_GPIO,
+	.gpio_int2 = LSM330DLC_ACC_DEFAULT_INT2_GPIO,
 
 #endif	
-
-    .gpio_init = sensor_acc_lsm330d_gpio_init,
-    .gpio_exit = sensor_acc_lsm330d_gpio_exit,
+	/*GPIO INT is not used.*/
+	/*Chenxi Mao 20131025*/
+//    .gpio_init = sensor_acc_lsm330d_gpio_init,
+//    .gpio_exit = sensor_acc_lsm330d_gpio_exit,
     .init = sensors_acc_power_init,
 };
 #endif
 
 //gyro
 #ifdef CONFIG_ZTEMT_SENSORS_GYRO_LSM330D
-
+/*
 int sensor_gyro_lsm330d_gpio_int_init(unsigned pin_num, char *pin_name)
 {
     int rc;
@@ -2062,7 +2063,7 @@ int sensor_gyro_lsm330d_gpio_exit(void)
 	printk(KERN_INFO "----------%s: %d: exit \n", __func__,__LINE__);
     return 0;
 }
-
+*/
 struct lsm330dlc_gyr_platform_data sensors_gyro_lsm330d_pdata = {
     .fs_range = LSM330DLC_GYR_FS_2000DPS,
         
@@ -2086,12 +2087,12 @@ struct lsm330dlc_gyr_platform_data sensors_gyro_lsm330d_pdata = {
     .negate_z = 1,
 #endif	
     .poll_interval = 100,
-    .min_interval = LSM330DLC_MIN_POLL_PERIOD_MS, /* 2ms */
+    .min_interval = LSM330DLC_GYR_MIN_POLL_PERIOD_MS, /* 2ms */
 
-    .gpio_int1 = DEFAULT_INT1_GPIO,
-    .gpio_int2 = DEFAULT_INT2_GPIO,     /* int for fifo */
-    .gpio_init = sensor_gyro_lsm330d_gpio_init,
-    .gpio_exit = sensor_gyro_lsm330d_gpio_exit,
+    .gpio_int1 = LSM330DLC_GYR_DEFAULT_INT1_GPIO,
+    .gpio_int2 = LSM330DLC_GYR_DEFAULT_INT1_GPIO,     /* int for fifo */
+ //   .gpio_init = sensor_gyro_lsm330d_gpio_init,
+ //   .gpio_exit = sensor_gyro_lsm330d_gpio_exit,
 
     .watermark = 0,
     .fifomode = 0,
