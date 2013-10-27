@@ -177,16 +177,11 @@ int gen_pool_add_virt(struct gen_pool *pool, unsigned long virt, phys_addr_t phy
 	struct gen_pool_chunk *chunk;
 	int nbits = size >> pool->min_alloc_order;
 	int nbytes = sizeof(struct gen_pool_chunk) +
-				(nbits + BITS_PER_BYTE - 1) / BITS_PER_BYTE;
+				BITS_TO_LONGS(nbits) * sizeof(long);
 
-	if (nbytes <= PAGE_SIZE)
-		chunk = kmalloc_node(nbytes, __GFP_ZERO, nid);
-	else
-		chunk = vmalloc(nbytes);
+	chunk = kmalloc_node(nbytes, GFP_KERNEL | __GFP_ZERO, nid);
 	if (unlikely(chunk == NULL))
 		return -ENOMEM;
-	if (nbytes > PAGE_SIZE)
-		memset(chunk, 0, nbytes);
 
 	chunk->phys_addr = phys;
 	chunk->start_addr = virt;
