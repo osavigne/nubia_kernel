@@ -1250,9 +1250,9 @@ static long __tun_chr_ioctl(struct file *file, unsigned int cmd,
 	void __user* argp = (void __user*)arg;
 	struct sock_fprog fprog;
 	struct ifreq ifr;
-	//int sndbuf;/*Chenxi Mao fix build error*/
-	//int vnet_hdr_sz;/*Chenxi Mao fix build error*/
-	//int ret = 0; /*Chenxi Mao fix build error*/
+	int sndbuf;
+	int vnet_hdr_sz;
+	int ret;
 
 #ifdef CONFIG_ANDROID_PARANOID_NETWORK
 	if (cmd != TUNGETIFF && !capable(CAP_NET_ADMIN)) {
@@ -1260,7 +1260,7 @@ static long __tun_chr_ioctl(struct file *file, unsigned int cmd,
 	}
 #endif
 
-	if (cmd == TUNSETIFF || _IOC_TYPE(cmd) == 0x89)
+	if (cmd == TUNSETIFF || _IOC_TYPE(cmd) == 0x89) {
 		if (copy_from_user(&ifr, argp, ifreq_len))
 			return -EFAULT;
 	} else {
