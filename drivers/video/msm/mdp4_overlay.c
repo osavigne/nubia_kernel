@@ -3132,10 +3132,10 @@ int mdp4_overlay_mdp_perf_req(struct msm_fb_data_type *mfd)
 #if defined( CONFIG_ZTEMT_LCD_V5)||defined(CONFIG_ZTEMT_LCD_Z5MINI)
 #else
 	if (ab_quota_total > mdp_max_bw)
-		pr_warn("%s: req ab bw=%llu is larger than max bw=%llu",
+		pr_debug("%s: req ab bw=%llu is larger than max bw=%llu",
 			__func__, ab_quota_total, mdp_max_bw);
 	if (ib_quota_total > mdp_max_bw)
-		pr_warn("%s: req ib bw=%llu is larger than max bw=%llu",
+		pr_debug("%s: req ib bw=%llu is larger than max bw=%llu",
 			__func__, ib_quota_total, mdp_max_bw);
 #endif
 	//added by congshan 20130327 end
