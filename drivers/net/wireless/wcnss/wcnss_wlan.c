@@ -25,10 +25,10 @@
 #include <linux/gpio.h>
 #include <linux/wakelock.h>
 #include <linux/delay.h>
+#include <linux/ratelimit.h>
 #include <mach/peripheral-loader.h>
 #include <mach/msm_smd.h>
 #include <mach/msm_iomap.h>
-#include <linux/ratelimit.h>
 #include <linux/mfd/pm8xxx/misc.h>
 
 #define DEVICE "wcnss_wlan"
