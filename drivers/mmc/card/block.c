@@ -587,7 +587,6 @@ cmd_rel_host:
 
 cmd_done:
 	mmc_blk_put(md);
-cmd_err:
 	kfree(idata->buf);
 	kfree(idata);
 	return err;
