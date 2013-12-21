@@ -488,7 +488,7 @@ static int mmc_blk_ioctl_cmd(struct block_device *bdev,
 	md = mmc_blk_get(bdev->bd_disk);
 	if (!md) {
 		err = -EINVAL;
-		goto cmd_err;
+		goto cmd_done;
 	}
 
 	card = md->queue.card;
