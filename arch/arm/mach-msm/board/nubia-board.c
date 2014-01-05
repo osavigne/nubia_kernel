@@ -107,7 +107,6 @@
 
 #ifdef CONFIG_ZTEMT_SENSORS_PRESS_LPS331AP
 #include <linux/i2c/sensor_press_st_lps331ap.h>
-#define GPIO_GYRO_INT      28
 #endif
 //===================================== sensor include end   ==========================================//
 //ZTEMT ADD BY chengdongsheng 2012/0922
@@ -1987,7 +1986,7 @@ struct lsm330dlc_acc_platform_data sensors_acc_lsm330d_pdata = {
 
 //gyro
 #ifdef CONFIG_ZTEMT_SENSORS_GYRO_LSM330D
-
+/*
 int sensor_gyro_lsm330d_gpio_int_init(unsigned pin_num, char *pin_name)
 {
     int rc;
@@ -2064,7 +2063,7 @@ int sensor_gyro_lsm330d_gpio_exit(void)
 	printk(KERN_INFO "----------%s: %d: exit \n", __func__,__LINE__);
     return 0;
 }
-
+*/
 struct lsm330dlc_gyr_platform_data sensors_gyro_lsm330d_pdata = {
     .fs_range = LSM330DLC_GYR_FS_2000DPS,
         
