@@ -1507,8 +1507,8 @@ static void reg_process_hint(struct regulatory_request *reg_request,
 	if (wiphy_idx_valid(reg_request->wiphy_idx))
 		wiphy = wiphy_idx_to_wiphy(reg_request->wiphy_idx);
 
-	if (reg_initiator == NL80211_REGDOM_SET_BY_DRIVER &&
-	    !wiphy) {
+	if ((reg_initiator == NL80211_REGDOM_SET_BY_DRIVER ||
+	     reg_initiator == NL80211_REGDOM_SET_BY_COUNTRY_IE) && !wiphy) {
 		kfree(reg_request);
 		return;
 	}
@@ -2139,7 +2139,7 @@ static int __set_regdom(const struct ieee80211_regdomain *rd)
 		 * checking if the alpha2 changes if CRDA was already called
 		 */
 		if (!regdom_changes(rd->alpha2))
-			return -EINVAL;
+			return -EALREADY;
 	}
 
 	/*
@@ -2259,6 +2259,9 @@ int set_regdom(const struct ieee80211_regdomain *rd)
 	/* Note that this doesn't update the wiphys, this is done below */
 	r = __set_regdom(rd);
 	if (r) {
+		if (r == -EALREADY)
+			reg_set_request_processed();
+
 		kfree(rd);
 		mutex_unlock(&reg_mutex);
 		return r;

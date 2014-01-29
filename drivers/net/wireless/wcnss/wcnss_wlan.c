@@ -42,12 +42,12 @@
 #endif
 
 #define DEVICE "wcnss_wlan"
+#define CTRL_DEVICE "wcnss_ctrl"
 #define VERSION "1.01"
 #define WCNSS_PIL_DEVICE "wcnss"
 
 /* module params */
 #define WCNSS_CONFIG_UNSPECIFIED (-1)
-#define UINT32_MAX (0xFFFFFFFFU)
 
 static int has_48mhz_xo = WCNSS_CONFIG_UNSPECIFIED;
 module_param(has_48mhz_xo, int, S_IWUSR | S_IRUGO);
@@ -75,6 +75,14 @@ static DEFINE_SPINLOCK(reg_spinlock);
 #define WCNSS_CTRL_CHANNEL			"WCNSS_CTRL"
 #define WCNSS_MAX_FRAME_SIZE		(4*1024)
 #define WCNSS_VERSION_LEN			30
+#define WCNSS_MAX_CMD_LEN		(128)
+#define WCNSS_MIN_CMD_LEN		(3)
+#define WCNSS_MIN_SERIAL_LEN		(6)
+
+/* control messages from userspace */
+#define WCNSS_USR_CTRL_MSG_START  0x00000000
+#define WCNSS_USR_SERIAL_NUM      (WCNSS_USR_CTRL_MSG_START + 1)
+#define WCNSS_USR_HAS_CAL_DATA    (WCNSS_USR_CTRL_MSG_START + 2)
 
 /* message types */
 #define WCNSS_CTRL_MSG_START	0x01000000
@@ -113,13 +121,13 @@ struct wcnss_pmic_dump {
 };
 
 static struct wcnss_pmic_dump wcnss_pmic_reg_dump[] = {
-	{"S2", 0x1D8},
-	{"L4", 0xB4},
-	{"L10", 0xC0},
-	{"LVS2", 0x62},
-	{"S4", 0x1E8},
-	{"LVS7", 0x06C},
-	{"LVS1", 0x060},
+	{"S2", 0x1D8}, /* S2 */
+	{"L4", 0xB4},  /* L4 */
+	{"L10", 0xC0},  /* L10 */
+	{"LVS2", 0x62},   /* LVS2 */
+	{"S4", 0x1E8}, /*S4*/
+	{"LVS7", 0x06C}, /*LVS7*/
+	{"LVS1", 0x060}, /*LVS7*/
 };
 
 #define NVBIN_FILE "wlan/prima/WCNSS_qcom_wlan_nv.bin"
@@ -250,10 +258,12 @@ static struct {
 	int	fw_cal_available;
 	int	user_cal_read;
 	int	user_cal_available;
-	u32	user_cal_rcvd;
+	int	user_cal_rcvd;
 	int	user_cal_exp_size;
 	int	device_opened;
+	int	ctrl_device_opened;
 	struct mutex dev_lock;
+	struct mutex ctrl_lock;
 	wait_queue_head_t read_wait;
 } *penv = NULL;
 
@@ -340,9 +350,8 @@ void wcnss_riva_dump_pmic_regs(void)
 			pr_err("PMIC READ: Failed to read addr = %d\n",
 					wcnss_pmic_reg_dump[i].reg_addr);
 		else
-			pr_info_ratelimited("PMIC READ: %s addr = %x, value = %x\n",
-				wcnss_pmic_reg_dump[i].reg_name,
-				wcnss_pmic_reg_dump[i].reg_addr, val);
+			pr_err("PMIC READ: addr = %x, value = %x\n",
+					wcnss_pmic_reg_dump[i].reg_addr, val);
 	}
 }
 
@@ -1279,6 +1288,80 @@ nv_download:
 
 
 
+static int wcnss_ctrl_open(struct inode *inode, struct file *file)
+{
+	int rc = 0;
+
+	if (!penv || penv->ctrl_device_opened)
+		return -EFAULT;
+
+	penv->ctrl_device_opened = 1;
+
+	return rc;
+}
+
+
+void process_usr_ctrl_cmd(u8 *buf, size_t len)
+{
+	u16 cmd = buf[0] << 8 | buf[1];
+
+	switch (cmd) {
+
+	case WCNSS_USR_SERIAL_NUM:
+		if (WCNSS_MIN_SERIAL_LEN > len) {
+			pr_err("%s: Invalid serial number\n", __func__);
+			return;
+		}
+		penv->serial_number = buf[2] << 24 | buf[3] << 16
+			| buf[4] << 8 | buf[5];
+		break;
+
+	case WCNSS_USR_HAS_CAL_DATA:
+		if (1 < buf[2])
+			pr_err("%s: Invalid data for cal %d\n", __func__,
+				buf[2]);
+		has_calibrated_data = buf[2];
+		break;
+
+	default:
+		pr_err("%s: Invalid command %d\n", __func__, cmd);
+		break;
+	}
+}
+
+static ssize_t wcnss_ctrl_write(struct file *fp, const char __user
+			*user_buffer, size_t count, loff_t *position)
+{
+	int rc = 0;
+	u8 buf[WCNSS_MAX_CMD_LEN];
+
+	if (!penv || !penv->ctrl_device_opened || WCNSS_MAX_CMD_LEN < count
+			|| WCNSS_MIN_CMD_LEN > count)
+		return -EFAULT;
+
+	mutex_lock(&penv->ctrl_lock);
+	rc = copy_from_user(buf, user_buffer, count);
+	if (0 == rc)
+		process_usr_ctrl_cmd(buf, count);
+
+	mutex_unlock(&penv->ctrl_lock);
+
+	return rc;
+}
+
+
+static const struct file_operations wcnss_ctrl_fops = {
+	.owner = THIS_MODULE,
+	.open = wcnss_ctrl_open,
+	.write = wcnss_ctrl_write,
+};
+
+static struct miscdevice wcnss_usr_ctrl = {
+	.minor = MISC_DYNAMIC_MINOR,
+	.name = CTRL_DEVICE,
+	.fops = &wcnss_ctrl_fops,
+};
+
 static int
 wcnss_trigger_config(struct platform_device *pdev)
 {
@@ -1449,7 +1532,7 @@ static ssize_t wcnss_wlan_write(struct file *fp, const char __user
 			*user_buffer, size_t count, loff_t *position)
 {
 	int rc = 0;
-	size_t size = 0;
+	int size = 0;
 
 	if (!penv || !penv->device_opened || penv->user_cal_available)
 		return -EFAULT;
@@ -1457,7 +1540,7 @@ static ssize_t wcnss_wlan_write(struct file *fp, const char __user
 	if (penv->user_cal_rcvd == 0 && count >= 4
 			&& !penv->user_cal_data) {
 		rc = copy_from_user((void *)&size, user_buffer, 4);
-		if (!size || size > MAX_CALIBRATED_DATA_SIZE) {
+		if (size > MAX_CALIBRATED_DATA_SIZE) {
 			pr_err(DEVICE " invalid size to write %d\n", size);
 			return -EFAULT;
 		}
@@ -1476,8 +1559,7 @@ static ssize_t wcnss_wlan_write(struct file *fp, const char __user
 	} else if (penv->user_cal_rcvd == 0 && count < 4)
 		return -EFAULT;
 
-	if ((UINT32_MAX - count < penv->user_cal_rcvd) ||
-	     MAX_CALIBRATED_DATA_SIZE < count + penv->user_cal_rcvd) {
+	if (MAX_CALIBRATED_DATA_SIZE < count + penv->user_cal_rcvd) {
 		pr_err(DEVICE " invalid size to write %d\n", count +
 				penv->user_cal_rcvd);
 		rc = -ENOMEM;
@@ -1537,6 +1619,7 @@ wcnss_wlan_probe(struct platform_device *pdev)
 		return -ENOENT;
 
 	mutex_init(&penv->dev_lock);
+	mutex_init(&penv->ctrl_lock);
 	init_waitqueue_head(&penv->read_wait);
 
 	/*
@@ -1549,6 +1632,9 @@ wcnss_wlan_probe(struct platform_device *pdev)
 	 * place
 	 */
 	pr_info(DEVICE " probed in built-in mode\n");
+
+	misc_register(&wcnss_usr_ctrl);
+
 	return misc_register(&wcnss_misc);
 
 }
