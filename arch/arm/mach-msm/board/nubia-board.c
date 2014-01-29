@@ -3514,6 +3514,7 @@ static struct platform_device *cdp_devices[] __initdata = {
 	&msm_rotator_device,
 #endif
 	&msm8064_pc_cntr,
+	&msm8064_cpu_slp_status, /*Chenxi.Mao*/
 };
 
 static struct platform_device
