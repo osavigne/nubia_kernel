@@ -977,8 +977,9 @@ int msm_pm_wait_cpu_shutdown(unsigned int cpu)
 		if (acc_sts & msm_pm_slp_sts[cpu].mask)
 			return 0;
 		udelay(100);
-		WARN(++timeout == 10, "CPU%u didn't collape within 1ms\n",
-					cpu);
+		/*Chenxi.Mao: instead warnings of error logs.*/
+		if (++timeout == 10)
+			pr_err("CPU%u didn't collape within 1ms\n", cpu);
 	}
 
 	return -EBUSY;
