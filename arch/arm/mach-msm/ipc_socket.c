@@ -260,7 +260,6 @@ static int msm_ipc_router_create(struct net *net,
 {
 	struct sock *sk;
 	struct msm_ipc_port *port_ptr;
-	void *pil;
 
 	if (unlikely(protocol != 0)) {
 		pr_err("%s: Protocol not supported\n", __func__);
@@ -293,9 +292,7 @@ static int msm_ipc_router_create(struct net *net,
 	sock_init_data(sock, sk);
 	sk->sk_rcvtimeo = DEFAULT_RCV_TIMEO;
 
-	pil = msm_ipc_load_default_node();
 	msm_ipc_sk(sk)->port = port_ptr;
-	msm_ipc_sk(sk)->default_pil = pil;
 
 	return 0;
 }
@@ -381,8 +378,14 @@ static int msm_ipc_router_sendmsg(struct kiocb *iocb, struct socket *sock,
 		msm_ipc_router_ipc_log(IPC_SEND, ipc_buf, port_ptr);
 	ret = msm_ipc_router_send_to(port_ptr, msg, &dest->address);
 	if (ret != total_len) {
-		pr_err("%s: Send_to failure %d\n", __func__, ret);
-		ret = -EFAULT;
+		if (ret < 0) {
+			if (ret != -EAGAIN)
+				pr_err("%s: Send_to failure %d\n",
+							__func__, ret);
+			msm_ipc_router_free_skb(msg);
+		} else if (ret >= 0) {
+			ret = -EFAULT;
+		}
 	}
 
 out_sendmsg:
