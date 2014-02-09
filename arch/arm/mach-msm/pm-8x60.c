@@ -979,7 +979,7 @@ int msm_pm_wait_cpu_shutdown(unsigned int cpu)
 		udelay(100);
 		/*Chenxi.Mao: instead warnings of error logs.*/
 		if (++timeout == 10)
-			pr_err("CPU%u didn't collape within 1ms\n", cpu);
+			pr_debug("CPU%u didn't collape within 1ms\n", cpu);
 	}
 
 	return -EBUSY;
