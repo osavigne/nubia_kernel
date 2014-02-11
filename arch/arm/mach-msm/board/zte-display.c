@@ -273,6 +273,7 @@ static struct msm_panel_common_pdata mdp_pdata = {
 	.gpio = MDP_VSYNC_GPIO,
 	.mdp_max_clk = 266667000,
 #ifdef CONFIG_ZTEMT_LCD_8064_COMMON
+        .mdp_max_bw = 4290000000u,
 #else
 	.mdp_max_bw = 2000000000,
 #endif
