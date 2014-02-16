@@ -64,20 +64,11 @@ static irqreturn_t pwrkey_release_irq(int irq, void *_pwrkey)
 	if (pwrkey->press == false) {
 		input_report_key(pwrkey->pwr, KEY_POWER, 1);
 		input_sync(pwrkey->pwr);
-		//add by yfliu, sometimes long press pwr key cannot pop power menu
-#ifdef CONFIG_INPUT_ZTEMT_PWRKEY
-		/*nothing*/
-#else
 		pwrkey->press = true;
-#endif
-	} 
-#ifdef CONFIG_INPUT_ZTEMT_PWRKEY
-	pwrkey->press = false;
-#else
-	else {
+	} else {
 		pwrkey->press = false;
 	}
-#endif
+
 	input_report_key(pwrkey->pwr, KEY_POWER, 0);
 	input_sync(pwrkey->pwr);
 
