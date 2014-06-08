@@ -20,6 +20,7 @@
 #include <linux/slab.h>
 #include <linux/pm_runtime.h>
 #include <linux/slimbus/slimbus.h>
+#include <linux/input.h>
 #include <sound/core.h>
 #include <sound/soc.h>
 #include <sound/soc-dapm.h>
@@ -974,8 +975,8 @@ static void *def_tabla_mbhc_cal(void)
 	btn_low = tabla_mbhc_cal_btn_det_mp(btn_cfg, TABLA_BTN_DET_V_BTN_LOW);
 	btn_high = tabla_mbhc_cal_btn_det_mp(btn_cfg, TABLA_BTN_DET_V_BTN_HIGH);
 	btn_low[0] = -50;
-	btn_high[0] = 45;
-	btn_low[1] = 46;
+	btn_high[0] = 10;
+	btn_low[1] = 11;
 	btn_high[1] = 52;
 	btn_low[2] = 53;
 	btn_high[2] = 94;
@@ -1278,7 +1279,7 @@ static int msm_slimbus_4_hw_params(struct snd_pcm_substream *substream,
 
 static int msm_audrx_init(struct snd_soc_pcm_runtime *rtd)
 {
-	int err;
+	int err, ret;
 #ifndef CONFIG_SWITCH_FSA8008
 	uint32_t revision;
 #endif
@@ -1333,6 +1334,14 @@ static int msm_audrx_init(struct snd_soc_pcm_runtime *rtd)
 	if (err) {
 		pr_err("failed to create new jack\n");
 		return err;
+	}
+
+	ret = snd_jack_set_key(button_jack.jack,
+			       SND_JACK_BTN_0,
+			       KEY_MEDIA);
+	if (ret) {
+		pr_err("%s: Failed to set code for btn-0\n", __func__);
+		return ret;
 	}
 
 	codec_clk = clk_get(cpu_dai->dev, "osr_clk");

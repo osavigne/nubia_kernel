@@ -276,7 +276,7 @@ static void ztemt_led_lc_set(struct pm8xxx_led_data *led, enum led_brightness va
 	if (value < 0 || value > 5) {
 		value = 5;
 	}
-	pr_debug("%s value:%d",__func__,value);
+	printk("%s value:%d",__func__,value);
 
 	/* ZTEMT END */
 	level = (value << PM8XXX_DRV_LED_CTRL_SHIFT) &

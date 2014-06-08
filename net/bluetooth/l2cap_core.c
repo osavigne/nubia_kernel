@@ -90,12 +90,9 @@ static int l2cap_answer_move_poll(struct sock *sk);
 static int l2cap_create_cfm(struct hci_chan *chan, u8 status);
 static int l2cap_deaggregate(struct hci_chan *chan, struct l2cap_pinfo *pi);
 static void l2cap_chan_ready(struct sock *sk);
-static void l2cap_conn_del(struct hci_conn *hcon, int err, u8 is_process);
 static u16 l2cap_get_smallest_flushto(struct l2cap_chan_list *l);
 static void l2cap_set_acl_flushto(struct hci_conn *hcon, u16 flush_to);
-
-//ztemt deleted
-//static void l2cap_queue_acl_data(struct work_struct *worker);
+static void l2cap_queue_acl_data(struct work_struct *worker);
 static void l2cap_queue_smp_data(struct work_struct *worker);
 static struct att_channel_parameters{
 	struct sk_buff *skb;
@@ -1185,7 +1182,7 @@ static struct l2cap_conn *l2cap_conn_add(struct hci_conn *hcon, u8 status)
 	return conn;
 }
 
-static void l2cap_conn_del(struct hci_conn *hcon, int err, u8 is_process)
+void l2cap_conn_del(struct hci_conn *hcon, int err, u8 is_process)
 {
 	struct l2cap_conn *conn = hcon->l2cap_data;
 	struct sock *sk;
@@ -7297,8 +7294,7 @@ static inline int l2cap_att_channel(struct l2cap_conn *conn, __le16 cid,
 	struct sk_buff *skb_rsp;
 	struct l2cap_hdr *lh;
 	int dir;
-	//ztemt deleted
-	//struct work_struct *open_worker;
+	struct work_struct *open_worker;
 	u8 err_rsp[] = {L2CAP_ATT_ERROR, 0x00, 0x00, 0x00,
 						L2CAP_ATT_NOT_SUPPORTED};
 
@@ -7330,54 +7326,39 @@ static inline int l2cap_att_channel(struct l2cap_conn *conn, __le16 cid,
 	if (!sk)
 		goto drop;
 
-    BT_DBG("1");
-
 	bh_lock_sock(sk);
 
-	BT_DBG("sk %p, len %d, sk_state %d", sk, skb->len, sk->sk_state);
+	BT_DBG("sk %p, len %d", sk, skb->len);
 
 	if (sk->sk_state != BT_BOUND && sk->sk_state != BT_CONNECTED) {
-		//deleted by ztemt to avoid the multiple device connecting lost problem
-             /*att_chn_params.cid = cid;
-               att_chn_params.conn = conn;
-               att_chn_params.dir = dir;
-               att_chn_params.skb = skb;
-               open_worker = kzalloc(sizeof(*open_worker), GFP_ATOMIC);
-               if (!open_worker)
-                       BT_ERR("Out of memory");
-               INIT_WORK(open_worker, l2cap_queue_acl_data);
-               schedule_work(open_worker);
-               goto done;*/
-		
-		//ztemt added 
-		goto drop;
+		att_chn_params.cid = cid;
+		att_chn_params.conn = conn;
+		att_chn_params.dir = dir;
+		att_chn_params.skb = skb;
+		open_worker = kzalloc(sizeof(*open_worker), GFP_ATOMIC);
+		if (!open_worker)
+			BT_ERR("Out of memory");
+		INIT_WORK(open_worker, l2cap_queue_acl_data);
+		schedule_work(open_worker);
+		goto done;
 	}
-
-    BT_DBG("2");
 
 	if (l2cap_pi(sk)->imtu < skb->len)
 		goto drop;
 
-    BT_DBG("3");
-
 	if (!sock_queue_rcv_skb(sk, skb))
 		goto done;
 
-    BT_DBG("4");
 drop:
-
-    BT_DBG("5");
 	if (skb->data[0] != L2CAP_ATT_INDICATE)
 		goto not_indicate;
 
-    BT_DBG("6");
 	/* If this is an incoming Indication, we are required to confirm */
 
 	skb_rsp = bt_skb_alloc(sizeof(u8) + L2CAP_HDR_SIZE, GFP_ATOMIC);
 	if (!skb_rsp)
 		goto free_skb;
 
-    BT_DBG("7");
 	lh = (struct l2cap_hdr *) skb_put(skb_rsp, L2CAP_HDR_SIZE);
 	lh->len = cpu_to_le16(sizeof(u8));
 	lh->cid = cpu_to_le16(L2CAP_CID_LE_DATA);
@@ -7386,11 +7367,7 @@ drop:
 	hci_send_acl(conn->hcon, NULL, skb_rsp, 0);
 	goto free_skb;
 
-    BT_DBG("8");
-
 not_indicate:
-
-    BT_DBG("9");
 	if (skb->data[0] & L2CAP_ATT_RESPONSE_BIT ||
 			skb->data[0] == L2CAP_ATT_CONFIRM)
 		goto free_skb;
@@ -7398,12 +7375,9 @@ not_indicate:
 	/* If this is an incoming PDU that requires a response, respond with
 	 * a generic error so remote device doesn't hang */
 
-    BT_DBG("10");
 	skb_rsp = bt_skb_alloc(sizeof(err_rsp) + L2CAP_HDR_SIZE, GFP_ATOMIC);
 	if (!skb_rsp)
 		goto free_skb;
-
-    BT_DBG("11");
 
 	lh = (struct l2cap_hdr *) skb_put(skb_rsp, L2CAP_HDR_SIZE);
 	lh->len = cpu_to_le16(sizeof(err_rsp));
@@ -7412,22 +7386,14 @@ not_indicate:
 	memcpy(skb_put(skb_rsp, sizeof(err_rsp)), err_rsp, sizeof(err_rsp));
 	hci_send_acl(conn->hcon, NULL, skb_rsp, 0);
 
-    BT_DBG("12");
-
 free_skb:
 	kfree_skb(skb);
 
-    BT_DBG("13");
-
 done:
-
-    BT_DBG("14");
 	if (sk)
 		bh_unlock_sock(sk);
 	return 0;
 }
-
-
 
 static void l2cap_recv_frame(struct l2cap_conn *conn, struct sk_buff *skb)
 {
@@ -7945,8 +7911,7 @@ err:
 	l2cap_conn_del(smp_chn_params.conn->hcon, EACCES, 0);
 }
 
-//ztemt deleted
-/*
+
 static void l2cap_queue_acl_data(struct work_struct *worker)
 {
 	struct sock *sk = NULL;
@@ -7967,7 +7932,6 @@ static void l2cap_queue_acl_data(struct work_struct *worker)
 				att_chn_params.conn->src,
 				att_chn_params.conn->dst,
 				att_chn_params.dir);
-		if(sk){
 		bh_lock_sock(sk);
 		if (sk->sk_state == BT_CONNECTED) {
 			sock_queue_rcv_skb(sk, att_chn_params.skb);
@@ -7976,16 +7940,13 @@ static void l2cap_queue_acl_data(struct work_struct *worker)
 			return;
 		}
 		bh_unlock_sock(sk);
-		}
 	}
-	if(!sk)
-		return;
 	bh_lock_sock(sk);
 
 	if (att_chn_params.skb->data[0] != L2CAP_ATT_INDICATE)
 		goto not_indicate;
 
-	// If this is an incoming Indication, we are required to confirm
+	/* If this is an incoming Indication, we are required to confirm */
 	skb_rsp = bt_skb_alloc(sizeof(u8) + L2CAP_HDR_SIZE, GFP_ATOMIC);
 	if (!skb_rsp)
 		goto free_skb;
@@ -8003,8 +7964,8 @@ not_indicate:
 			att_chn_params.skb->data[0] == L2CAP_ATT_CONFIRM)
 		goto free_skb;
 
-	// If this is an incoming PDU that requires a response, respond with
-	// a generic error so remote device doesn't hang 
+	/* If this is an incoming PDU that requires a response, respond with
+	 * a generic error so remote device doesn't hang */
 
 	skb_rsp = bt_skb_alloc(sizeof(err_rsp) + L2CAP_HDR_SIZE, GFP_ATOMIC);
 	if (!skb_rsp)
@@ -8024,7 +7985,6 @@ free_skb:
 		bh_unlock_sock(sk);
 
 }
-*/
 
 static int l2cap_debugfs_open(struct inode *inode, struct file *file)
 {

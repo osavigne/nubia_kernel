@@ -1545,12 +1545,7 @@ SYSCALL_DEFINE4(accept4, int, fd, struct sockaddr __user *, upeer_sockaddr,
 	err = security_socket_accept(sock, newsock);
 	if (err)
 		goto out_fd;
-	/* ZTEMT Added by LiuYongfeng, 2013/7/22 */
-	if((sock == NULL) || (sock->ops == NULL)){
-		printk("%s %d :Error,socket null pointer detected\n",__func__,__LINE__);
-		goto out_fd;
-	}
-	/* ZTEMT END */
+
 	err = sock->ops->accept(sock, newsock, sock->file->f_flags);
 	if (err < 0)
 		goto out_fd;

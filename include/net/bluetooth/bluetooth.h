@@ -112,11 +112,8 @@ struct bt_power {
 
 #define BT_LE_CONN_INTERVAL_MIN		0x0006
 #define BT_LE_CONN_INTERVAL_MAX		0x0C80
-
-//ztemt changed by majianjiang to speed up the intialization of ble connection
-#define BT_LE_CONN_INTERVAL_MIN_DEF	0x0010
-#define BT_LE_CONN_INTERVAL_MAX_DEF	0x0020
-//ztemt end
+#define BT_LE_CONN_INTERVAL_MIN_DEF	0x0008
+#define BT_LE_CONN_INTERVAL_MAX_DEF	0x0100
 
 #define BT_LE_LATENCY_MAX		0x01F4
 #define BT_LE_LATENCY_DEF		0x0000
